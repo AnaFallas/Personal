@@ -79,7 +79,7 @@ Se diseñó la siguiente máquina de estados finitos encargada de efectuar la tr
 
 Para probar el funcionamiento del transmisor se realizó un testbench en el que se utilizó como entrada el número hexadecimal 41 que representa el valor ascii para "A". En código morse se representa con ".-". En la siguiente imágen se puede apreciar la respuesta obtenida.
 
-![metastable]((./imagenes/testbench%2041.png) _Captura de la simulación post-implementación_
+![metastable]((./Imagenes/testbench%2041.png) _Captura de la simulación post-implementación_
 
 ### 4 Receptor
 
@@ -120,7 +120,7 @@ El diseño para el receptor se modularizó de la siguiente manera:
 
 Se diseñó la siguiente máquina de estados finitos (FSM) encargada de la recepción y decodificación de la señal Morse:
 
-![FSM Receptor](./imagenes/Diagrama_Receptor.png)  
+![FSM Receptor](./Imagenes/Diagrama_Receptor.png)  
 
 *Gráfico de elaboración propia*
 
@@ -163,8 +163,7 @@ El sistema utiliza dos displays de 7 segmentos multiplexados para mostrar el res
 Se desarrolló un testbench a nivel del modulo morse_receptor el cual demostró el funcionamiento de la máquina de estados y la decodificación, se baso en:
 - Recepción y decodificación correcta de letras individuales (A, S, O)
 - Detección precisa de puntos (.) y rayas (-)
-
-IMAGEN 
+![FSM Receptor](./Imagenes/receptor.png) 
 Se desarrollo un teste bench a nivel TOP para la visualización correcta en displays de 7 segmentos pero este no genero los resultados esperados.
 
 
