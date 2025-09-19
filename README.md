@@ -79,7 +79,7 @@ Se diseñó la siguiente máquina de estados finitos encargada de efectuar la tr
 
 Para probar el funcionamiento del transmisor se realizó un testbench en el que se utilizó como entrada el número hexadecimal 41 que representa el valor ascii para "A". En código morse se representa con ".-". En la siguiente imágen se puede apreciar la respuesta obtenida.
 
-![metastable](./testbench%2041.png) _Captura de la simulación post-implementación_
+![metastable]((./imagenes/testbench%2041.png) _Captura de la simulación post-implementación_
 
 ### 4 Receptor
 
@@ -120,7 +120,8 @@ El diseño para el receptor se modularizó de la siguiente manera:
 
 Se diseñó la siguiente máquina de estados finitos (FSM) encargada de la recepción y decodificación de la señal Morse:
 
-![FSM Receptor](https://fsm_receptor.svg)  
+![FSM Receptor](./imagenes/Diagrama_Receptor.png)  
+
 *Gráfico de elaboración propia*
 
 - **ST_IDLE**: Estado inicial de espera. El receptor está listo para detectar el inicio de un nuevo pulso Morse. Permanece aquí hasta detectar un flanco de subida.  
