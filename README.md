@@ -248,9 +248,6 @@ if __name__ == "__main__":
 4. **Envío:** se transmite la cadena `"<numero>\r\n"` hacia la FPGA.  
 5. **Terminación:** al presionar `Ctrl + C`, se cierra la conexión limpiamente.
 
-![python](Imagenes/terminal_uart.png)_Interfaz del programa Python mostrando mensajes del juego_
-
----
 
 ## 5. Testbench – `tb_top_game`
 
