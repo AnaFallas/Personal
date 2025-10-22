@@ -180,7 +180,7 @@ La FSM controla las fases principales del juego:
 ---
 
 | **Estado / Grupo** | **En el diagrama** | **Contexto funcional** |
-|---------------------|--------------------------------|-------------------------------|--------------------------------------|
+|---------------------|--------------------------------|-------------------------------|
 | **G_IDLE** | En el bloque **Inicialización** → estado inicial (punto negro) → `G_IDLE`| FSM en reposo esperando `start_new_game_pulse` (botón o reinicio). |
 | **G_LATCH_TARGET** | En bloque **Inicialización**| Carga el número aleatorio desde el LFSR (semilla). |
 | **G_SEND_WELCOME / G_WAIT_WELCOME** | En bloque **Inicialización** | Envía el mensaje de bienvenida por UART y espera que termine la transmisión. |
