@@ -129,10 +129,6 @@ module uart_msg_streamer #(
 #### 3.2.6 Módulo `sevenseg_one_active_low`
 Muestra el número de intentos restantes en el display de 7 segmentos.
 
-![display](Imagenes/display7seg.png)_Visualización de intentos restantes en el display_
-
----
-
 #### 3.2.7 Módulo Principal `top_game`
 
 Integra todos los bloques anteriores y maneja la FSM principal del juego.
@@ -180,43 +176,180 @@ La FSM controla las fases principales del juego:
 | **G_SEND_NEWGAME / G_WAIT_NEWGAME** | En bloque **Mensajes** (final del flujo)| Muestra el prompt “envía cualquier carácter para iniciar un nuevo juego”. |
 | *(G_NG_POLL_RX / G_NG_ISSUE_LEER / G_NG_WAIT_LEER)* | En bloque **Nuevo juego** (fase final del diagrama)| Implementan el **reinicio real** cuando llega un carácter desde UART. |
 
+## 4. Programa en Python (Cliente UART)
 
-## 4. Testbench – `tb_top_game`
+El siguiente programa permite interactuar con la FPGA mediante comunicación serie, actuando como **cliente UART**.  
+Fue diseñado para ejecutarse en PC con Windows, Linux o macOS y requiere la librería `pyserial`.
 
-El testbench verifica el funcionamiento del sistema completo **sin UART física**.  
-Simula secuencias de entrada y revisa que las respuestas coincidan con las esperadas.
+### 4.1 Descripción General
 
-**Objetivos:**
+- Se conecta al puerto serie especificado por el usuario.  
+- Crea un hilo (`thread`) que **lee continuamente** los mensajes enviados por la FPGA.  
+- Permite al usuario escribir números (1–255) para enviarlos al juego.  
+- Valida el rango localmente y muestra errores de entrada.  
+- Finaliza limpiamente al presionar `Ctrl + C`.
+
+### 4.2 Código
+
+```python
+import serial
+import threading
+import time
+
+def game_message(ser):
+    """Lee y muestra todo lo recibido desde la FPGA"""
+    while True:
+        msg = ser.readline().decode(errors="ignore").strip()
+        if msg:
+            print(f"{msg}")
+        time.sleep(0.05)
+
+def val_input(usr_input):
+    """Valida el rango permitido (1–255)."""
+    if not 1 <= usr_input <= 255:
+        print(f"Error local: {usr_input} no es válido (rango 1–255)." )
+        return False
+    return True
+
+def main():
+    puerto = input("Ingrese el puerto serie: ").strip()
+    ser = serial.Serial(puerto, baudrate=115200, timeout=0.5)
+    time.sleep(2)
+    print(f"Conexión establecida en {ser.port}\n")
+
+    reader_thread = threading.Thread(target=game_message, args=(ser,), daemon=True)
+    reader_thread.start()
+
+    while True:
+        try:
+            usr_input = input().strip()
+            if not usr_input.isdigit():
+                print("Error local: Debe ingresar un número entero.")
+                continue
+            usr_input = int(usr_input)
+            if val_input(usr_input):
+                ser.write(f"{usr_input}\r\n".encode())
+                print(f" Enviando: {usr_input}")
+        except KeyboardInterrupt:
+            break
+
+    ser.close()
+    print("Conexión cerrada.")
+
+if __name__ == "__main__":
+    main()
+```
+
+### 4.3 Flujo del Programa
+
+1. **Inicialización:** se abre el puerto UART a 115200 baudios.  
+2. **Recepción continua:** el hilo `game_message` imprime todo lo que llega de la FPGA.  
+3. **Entrada del usuario:** se valida el número ingresado (1–255).  
+4. **Envío:** se transmite la cadena `"<numero>\r\n"` hacia la FPGA.  
+5. **Terminación:** al presionar `Ctrl + C`, se cierra la conexión limpiamente.
+
+![python](Imagenes/terminal_uart.png)_Interfaz del programa Python mostrando mensajes del juego_
+
+---
+
+## 5. Testbench – `tb_top_game`
+
+El testbench verifica el funcionamiento del sistema completo **sin UART física**, validando la FSM, la ROM y las respuestas del sistema.
+
+**Objetivos principales:**
 - Validar FSM, ROM, contador de intentos y reinicio.  
 - Comprobar sustitución de `'X'` en mensajes correctos.  
 - Evaluar temporizador y manejo de timeout.  
 
-![sim](Imagenes/simulacion.png)_Simulación del sistema completo_
+### 5.1 Estructura General
+
+El testbench instancia el módulo `top_game` y genera señales de reloj de 100 MHz.  
+Además, simula la recepción y transmisión UART para realizar **autoverificación** completa.
+
+```systemverilog
+`timescale 1ns/1ps
+module tb_top_game;
+  logic clk_in = 0;
+  logic reset_button, newgame_button;
+  logic [15:0] seed_switches;
+  logic rx, tx;
+  logic [15:0] led;
+  logic [6:0] seg;
+  logic dp;
+  logic [3:0] an;
+
+  top_game dut (...);
+  always #5 clk_in = ~clk_in;
+```
+---
+
+### 5.2 Utilidades y Tareas de Apoyo
+
+El testbench incluye una serie de **tareas automáticas** y **funciones auxiliares** que facilitan la validación:
+
+- **`autobaud_estimate`**: estima automáticamente el tiempo de bit (bit time) de la transmisión UART.  
+- **`uart_rx_capture_byte`**: captura un byte transmitido por el DUT, reconstruyendo su valor.  
+- **`capture_tx_packet_until_crlf`**: recibe una cadena completa hasta CR+LF (`\r\n`).  
+- **`expect_msg`**: compara el mensaje recibido con una referencia esperada y marca OK/FAIL.  
+- **`guess_and_expect_low/high/correct`**: simula intentos del jugador y espera las respuestas apropiadas.  
+
+```systemverilog
+task automatic expect_msg(input string expected_ascii, input string tag);
+  byte_t  got_bytes[];
+  byte_t  ref_bytes[];
+  capture_tx_packet_until_crlf(got_bytes, bit_ns_est, 2000, 256);
+  mk_ref(expected_ascii, ref_bytes);
+  if (!pkt_equals_ref(got_bytes, ref_bytes))
+    $error("[%s] [EXPECT:%s] FAIL", t_us(), tag);
+  else
+    $display("[%s] [EXPECT:%s] OK", t_us(), tag);
+endtask
+```
+---
+
+### 5.3 Secuencia de Prueba Automática
+
+La simulación principal ejecuta la tarea `rom_selftest_full`, que prueba los dos escenarios clave:
+
+1. **Adivinanza correcta**:  
+   - Se generan números bajos, altos y el valor exacto.  
+   - Se espera el mensaje `"Felicidades! Adivinaste el numero en X intentos."`.
+
+2. **Sin intentos disponibles**:  
+   - Se envían 5 intentos incorrectos.  
+   - Se espera `"Lo siento! Se han acabado los intentos."` seguido del mensaje de nuevo juego.
+
+```systemverilog
+initial begin
+  reset_button   = 1'b1;
+  newgame_button = 1'b0;
+  seed_switches  = 16'h0042;
+  rx             = 1'b1;
+
+  pulse_reset_release();
+  autobaud_estimate(ok_ab, bit_ns_est, 10000);
+  rom_selftest_full();
+  $finish;
+end
+```
+
+**Resultados**  
+El testbench se logró ejecutar en simulación Post-Shynthesis y Post-Implementation, en la cual muestran los mensajes UART capturados con marcas de tiempo, verificando automáticamente el comportamiento del juego.
+
+![sim](Imagenes/simulacion.png)_Simulación del sistema completo en el testbench_
 
 ---
 
-## 5. Observaciones y Resultados
+---
+
+## 5. Observaciones
 
 - El sistema logra una comunicación coherente con la PC a través del UART a 115200 baudios.  
 - Los mensajes son transmitidos correctamente desde la ROM y procesados por el `uart_msg_streamer`.  
-- El display muestra correctamente los intentos restantes.  
-- El `tries_counter` y `timer_30s_16mhz` sincronizan adecuadamente con el flujo del juego.  
+- El display muestra correctamente los intentos restantes.   
 
 **Limitaciones encontradas:**
 - Se observaron retrasos en la actualización del display durante la transmisión de mensajes extensos.  
-- El testbench requiere ciclos adicionales de espera para sincronizar lecturas UART simuladas.  
-
+- El testbench requiere ciclos adicionales de espera para sincronizar lecturas UART simuladas. 
 ---
-
-## 6. Conclusiones
-
-- Se integraron exitosamente los módulos **FIFO**, **UART**, **ROM**, **LFSR** y **FSM** en una aplicación funcional.  
-- La metodología modular facilitó la depuración y pruebas parciales.  
-- Se comprobó la importancia del control de temporización y sincronización en sistemas UART.  
-- El sistema es completamente sintentizable y se comporta correctamente en simulación.  
-
----
-
-**Autores:**  
-Proyecto desarrollado por el grupo de trabajo del curso **EL3313 Taller de Diseño Digital**, II Semestre 2025.
 
