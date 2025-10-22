@@ -165,18 +165,6 @@ La FSM controla las fases principales del juego:
 
 ![fsm](Imagenes/FSM.png)_Diagrama de la máquina de estados del juego_
 
-| Estado | Descripción |
-|---------|--------------|
-| `G_IDLE` | Espera un nuevo juego. |
-| `G_LATCH_TARGET` | Captura el número aleatorio. |
-| `G_SEND_WELCOME` / `G_WAIT_WELCOME` | Envía mensaje de bienvenida. |
-| `G_WAIT_INPUT` | Espera número desde UART. |
-| `G_PROCESS` | Compara el número con el objetivo. |
-| `G_SEND_FEEDBACK` / `G_WAIT_FEEDBACK` | Envía “mayor/menor”. |
-| `G_SEND_CORRECT` / `G_WAIT_CORRECT` | Envía mensaje de acierto. |
-| `G_SEND_NOTRIES` / `G_WAIT_NOTRIES` | Sin intentos. |
-| `G_SEND_NEWGAME` / `G_WAIT_NEWGAME` | Muestra prompt de reinicio. |
-
 ---
 
 | **Estado / Grupo** | **En el diagrama** | **Contexto funcional** |
@@ -190,7 +178,7 @@ La FSM controla las fases principales del juego:
 | **G_SEND_CORRECT / G_WAIT_CORRECT** | En bloque **Mensajes**| Envía mensaje de acierto y luego prepara el mensaje de “nuevo juego”. |
 | **G_SEND_NOTRIES / G_WAIT_NOTRIES** | En bloque **Mensajes**| Se activa cuando se acaban los intentos; envía mensaje de “sin intentos”. |
 | **G_SEND_NEWGAME / G_WAIT_NEWGAME** | En bloque **Mensajes** (final del flujo)| Muestra el prompt “envía cualquier carácter para iniciar un nuevo juego”. |
-| *(G_NG_POLL_RX / G_NG_ISSUE_LEER / G_NG_WAIT_LEER)* | En bloque **Nuevo juego** (fase final del diagrama)| No están en la tabla resumida, pero implementan el **reinicio real** cuando llega un carácter desde UART. |
+| *(G_NG_POLL_RX / G_NG_ISSUE_LEER / G_NG_WAIT_LEER)* | En bloque **Nuevo juego** (fase final del diagrama)| Implementan el **reinicio real** cuando llega un carácter desde UART. |
 
 
 ## 4. Testbench – `tb_top_game`
